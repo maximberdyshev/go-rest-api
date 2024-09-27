@@ -1,0 +1,15 @@
+basePath: /api/v1
+host: localhost:5000
+info:
+  contact: {}
+  title: REST-API
+  version: 1.0.0
+paths: {}
+security:
+- ApiKeyAuth: []
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

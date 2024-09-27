@@ -1,0 +1,13 @@
+app:
+  name: go-rest-api
+  version: 1.0.0
+  environment: local # local | container
+
+http:
+  port: 5000
+
+logger:
+  mode: dev # debug | dev | stage | prod
+  kibana_host: 127.0.0.1
+  kibana_port: 5601
+  kibana_index: go-rest-api

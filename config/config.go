@@ -13,12 +13,14 @@ type (
 		HTTP   `yaml:"http"`
 		Logger `yaml:"logger"`
 		Postgres
+		Webapi
 	}
 
 	App struct {
 		Name        string `env-required:"true" yaml:"name" env:"APP_NAME"`
 		Version     string `env-required:"true" yaml:"version" env:"APP_VERSION"`
 		Environment string `env-required:"true" yaml:"environment" env:"ENVIRONMENT"`
+		ApiKey      string `env:"API_KEY"`
 	}
 
 	HTTP struct {
@@ -33,9 +35,16 @@ type (
 	}
 
 	Postgres struct {
+		Host     string `env:"POSTGRES_HOST"`
+		Port     string `env:"POSTGRES_PORT"`
+		DB       string `env:"POSTGRES_DB"`
 		User     string `env:"POSTGRES_USER"`
 		Password string `env:"POSTGRES_PASSWORD"`
-		DB       string `env:"POSTGRES_DB"`
+	}
+
+	Webapi struct {
+		URL   string `env:"WEBAPI_URL"`
+		Token string `env:"WEBAPI_TOKEN"`
 	}
 )
 

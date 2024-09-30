@@ -1,0 +1,45 @@
+services:
+  rest-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rest-api
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    # TODO:
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+    networks:
+      - rest-api
+
+  db:
+    image: postgres:17.0-alpine3.20
+    container_name: db
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ${POSTGRES_DATA}:/var/lib/postgresql/data
+      - ${POSTGRES_INIT}:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - rest-api
+
+networks:
+  rest-api:
+    name: rest-api
+    ipam:
+      driver: default

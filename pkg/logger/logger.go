@@ -22,14 +22,18 @@ type (
 
 func New(cfg *Config) (logger *Logger, err error) {
 	switch cfg.Mode {
-	case "debug": // all err stacktrace
+	case "debug":
 		logger, err = zap.NewDevelopment()
 		if err != nil {
 			return nil, err
 		}
 
-	case "dev", "stage": // only fatal stacktrace
-		logger, err = zap.NewDevelopment(zap.AddStacktrace(zapcore.FatalLevel))
+	case "dev", "stage":
+		config := zap.NewDevelopmentConfig()
+		config.Level.SetLevel(zap.InfoLevel)
+		config.DisableStacktrace = true
+
+		logger, err = config.Build()
 		if err != nil {
 			return nil, err
 		}

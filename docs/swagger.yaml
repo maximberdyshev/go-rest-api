@@ -1,10 +1,210 @@
 basePath: /api/v1
+definitions:
+  entity.NewSong:
+    properties:
+      group:
+        type: string
+      song:
+        type: string
+    type: object
+  entity.Song:
+    properties:
+      group:
+        type: string
+      link:
+        type: string
+      name:
+        type: string
+      release_date:
+        type: string
+      text:
+        type: string
+    type: object
+  http_v1_handler.Response:
+    properties:
+      description:
+        type: string
+    type: object
 host: localhost:5000
 info:
   contact: {}
   title: REST-API
   version: 1.0.0
-paths: {}
+paths:
+  /songs:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+      summary: WIP..
+      tags:
+      - Songs
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: json
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entity.NewSong'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Success
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+      summary: Adding a new song.
+      tags:
+      - Songs
+  /songs/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: song id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+      summary: Delete song.
+      tags:
+      - Songs
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: song id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+      summary: WIP..
+      tags:
+      - Songs
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: song id
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: song text in json
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entity.Song'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http_v1_handler.Response'
+      summary: Update song.
+      tags:
+      - Songs
 security:
 - ApiKeyAuth: []
 securityDefinitions:

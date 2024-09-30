@@ -9,6 +9,5 @@ import (
 )
 
 func SwaggerRouteRegister(ctx context.Context, r *httprouter.Router) {
-	// TODO: httpSwagger.WrapHandler обернуть в middleware, для логирования
 	r.HandlerFunc(http.MethodGet, "/swagger/*any", httpSwagger.WrapHandler)
 }

@@ -9,6 +9,8 @@ import (
 	"go-rest-api/config"
 	"go-rest-api/internal/app"
 	"go-rest-api/pkg/logger"
+
+	_ "go-rest-api/docs"
 )
 
 //	@title		REST-API

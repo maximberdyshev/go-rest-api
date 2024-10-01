@@ -1,5 +1,20 @@
 basePath: /api/v1
 definitions:
+  entity.Content:
+    properties:
+      current_page:
+        type: integer
+      items: {}
+      total_items:
+        type: integer
+      total_page:
+        type: integer
+    type: object
+  entity.Couplet:
+    properties:
+      text:
+        type: string
+    type: object
   entity.NewSong:
     properties:
       group:
@@ -18,7 +33,9 @@ definitions:
       release_date:
         type: string
       text:
-        type: string
+        items:
+          type: string
+        type: array
     type: object
   http_v1_handler.Response:
     properties:
@@ -35,13 +52,41 @@ paths:
     get:
       consumes:
       - application/json
+      parameters:
+      - description: song name
+        in: query
+        name: name
+        type: string
+      - description: song group
+        in: query
+        name: group
+        type: string
+      - description: song release date
+        in: query
+        name: release_date
+        type: string
+      - description: page
+        in: query
+        minimum: 1
+        name: page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: Success
           schema:
-            $ref: '#/definitions/http_v1_handler.Response'
+            allOf:
+            - $ref: '#/definitions/http_v1_handler.Response'
+            - properties:
+                content:
+                  allOf:
+                  - $ref: '#/definitions/entity.Content'
+                  - properties:
+                      items:
+                        $ref: '#/definitions/entity.Song'
+                    type: object
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -58,7 +103,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http_v1_handler.Response'
-      summary: WIP..
+      summary: Get filtered songs.
       tags:
       - Songs
     post:
@@ -93,16 +138,16 @@ paths:
       summary: Adding a new song.
       tags:
       - Songs
-  /songs/{id}:
+  /songs/{name}:
     delete:
       consumes:
       - application/json
       parameters:
-      - description: song id
+      - description: song name
         in: path
-        name: id
+        name: name
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -133,9 +178,15 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: song id
+      - description: song name
         in: path
-        name: id
+        name: name
+        required: true
+        type: string
+      - description: page
+        in: query
+        minimum: 1
+        name: page
         required: true
         type: integer
       produces:
@@ -144,7 +195,17 @@ paths:
         "200":
           description: Success
           schema:
-            $ref: '#/definitions/http_v1_handler.Response'
+            allOf:
+            - $ref: '#/definitions/http_v1_handler.Response'
+            - properties:
+                content:
+                  allOf:
+                  - $ref: '#/definitions/entity.Content'
+                  - properties:
+                      items:
+                        $ref: '#/definitions/entity.Couplet'
+                    type: object
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -161,18 +222,18 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http_v1_handler.Response'
-      summary: WIP..
+      summary: Get song text with couplet pagination.
       tags:
       - Songs
     put:
       consumes:
       - application/json
       parameters:
-      - description: song id
+      - description: song name
         in: path
-        name: id
+        name: name
         required: true
-        type: integer
+        type: string
       - description: song text in json
         in: body
         name: request

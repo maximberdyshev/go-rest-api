@@ -14,14 +14,14 @@ const (
 	getSongs = "/api/v1/songs"
 	addSong
 
-	getSong = "/api/v1/songs/:id"
-	deleteSong
+	deleteSong = "/api/v1/songs/:name"
 	updateSong
+	getSong
 )
 
 func MusicRouteRegister(ctx context.Context, r *httprouter.Router, c *composite.Composite) {
-	r.HandlerFunc(http.MethodGet, getSongs, middleware.Wrap(ctx, c.Handler.GetSongs))
-	r.HandlerFunc(http.MethodGet, getSong, middleware.Wrap(ctx, c.Handler.GetSong))
+	r.HandlerFunc(http.MethodGet, getSongs, middleware.Wrap(ctx, c.Handler.GetFilteredSongs))
+	r.HandlerFunc(http.MethodGet, getSong, middleware.Wrap(ctx, c.Handler.GetSongText))
 
 	r.HandlerFunc(http.MethodPost, addSong, middleware.Wrap(ctx, c.Handler.AddSong))
 

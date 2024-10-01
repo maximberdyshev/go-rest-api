@@ -28,6 +28,7 @@ func New(ctx context.Context) *Webapi {
 	}
 }
 
+// GetSongDetail получает от внешнего сервиса данные о песне или возвращает ошибку.
 func (wa *Webapi) GetSongDetail(newSong entity.NewSong) (songDetail entity.SongDetail, err error) {
 	token := config.FromContext(wa.ctx).Webapi.Token
 	webapiURL := config.FromContext(wa.ctx).Webapi.URL

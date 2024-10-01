@@ -19,8 +19,10 @@ import (
 type (
 	Usecase interface {
 		AddSong(entity.NewSong) error
-		DeleteSong(int) (bool, error)
-		UpdateSong(int, entity.Song) (bool, error)
+		DeleteSong(string) (bool, error)
+		UpdateSong(string, entity.Song) (bool, error)
+		GetSongText(string, int) (entity.Content, error)
+		GetFilteredSongs(entity.FilterSong, int) (entity.Content, error)
 	}
 
 	Handler struct {
@@ -38,39 +40,121 @@ func New(ctx context.Context, usecase Usecase) *Handler {
 	}
 }
 
-// TODO
-// WIP..
-
-// GetSongs godoc
+// GetFilteredSongs godoc
 //
-//	@Summary	WIP..
+//	@Summary	Get filtered songs.
 //	@Tags		Songs
 //	@Accept		json
 //	@Produce	json
-//	@Success	200	{object}	Response	"Success"
-//	@Failure	400	{object}	Response	"Bad Request"
-//	@Failure	401	{object}	Response	"Unauthorized"
-//	@Failure	404	{object}	Response	"Not Found"
-//	@Failure	500	{object}	Response	"Internal Server Error"
+//	@Param		name			query		string												false	"song name"
+//	@Param		group			query		string												false	"song group"
+//	@Param		release_date	query		string												false	"song release date"
+//	@Param		page			query		int													false	"page"	minimum(1)
+//	@Success	200				{object}	Response{content=entity.Content{items=entity.Song}}	"Success"
+//	@Failure	400				{object}	Response											"Bad Request"
+//	@Failure	401				{object}	Response											"Unauthorized"
+//	@Failure	404				{object}	Response											"Not Found"
+//	@Failure	500				{object}	Response											"Internal Server Error"
 //	@Router		/songs [get]
-func (h *Handler) GetSongs(w http.ResponseWriter, r *http.Request) *errs.AppError {
+func (h *Handler) GetFilteredSongs(w http.ResponseWriter, r *http.Request) *errs.AppError {
+	page := r.URL.Query().Get("page")
+	pageID, err := strconv.Atoi(page)
+	if err != nil {
+		h.logger.Error("Invalid page id", zap.Error(err))
+		return errs.ErrBadRequest
+	}
+
+	if err := validateID(pageID); err != nil {
+		h.logger.Error("Validation failed", zap.Error(err))
+		return errs.ErrBadRequest
+	}
+
+	name := r.URL.Query().Get("name")
+	group := r.URL.Query().Get("group")
+	releaseDate := r.URL.Query().Get("release_date")
+
+	filter := entity.FilterSong{
+		Name:        trasnformStr(name).(*string),
+		Group:       trasnformStr(group).(*string),
+		ReleaseDate: trasnformStr(releaseDate).(*string),
+	}
+
+	content, err := h.usecase.GetFilteredSongs(filter, pageID)
+	if err != nil {
+		h.logger.Error("Failed get filtered songs", zap.Error(err))
+		if errors.Is(err, errs.ErrBadRequest) {
+			return errs.ErrBadRequest
+		}
+		return errs.ErrInternal
+	}
+
+	c := entity.Content{}
+	if content == c {
+		h.logger.Error("Songs not found", zap.Error(err))
+		return errs.ErrNotFound
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(Wrap(content))
+	h.logger.Info("Songs find successfully")
 	return nil
 }
 
-// GetSong godoc
+// GetSongText godoc
 //
-//	@Summary	WIP..
+//	@Summary	Get song text with couplet pagination.
 //	@Tags		Songs
 //	@Accept		json
 //	@Produce	json
-//	@Param		id	path		int			true	"song id"
-//	@Success	200	{object}	Response	"Success"
-//	@Failure	400	{object}	Response	"Bad Request"
-//	@Failure	401	{object}	Response	"Unauthorized"
-//	@Failure	404	{object}	Response	"Not Found"
-//	@Failure	500	{object}	Response	"Internal Server Error"
-//	@Router		/songs/{id} [get]
-func (h *Handler) GetSong(w http.ResponseWriter, r *http.Request) *errs.AppError {
+//	@Param		name	path		string													true	"song name"
+//	@Param		page	query		int														true	"page"	minimum(1)
+//	@Success	200		{object}	Response{content=entity.Content{items=entity.Couplet}}	"Success"
+//	@Failure	400		{object}	Response												"Bad Request"
+//	@Failure	401		{object}	Response												"Unauthorized"
+//	@Failure	404		{object}	Response												"Not Found"
+//	@Failure	500		{object}	Response												"Internal Server Error"
+//	@Router		/songs/{name} [get]
+func (h *Handler) GetSongText(w http.ResponseWriter, r *http.Request) *errs.AppError {
+	params := httprouter.ParamsFromContext(r.Context())
+	name := params.ByName("name")
+
+	if err := validateStr(name); err != nil {
+		h.logger.Error("Validation failed", zap.Error(err))
+		return errs.ErrBadRequest
+	}
+
+	page := r.URL.Query().Get("page")
+	pageID, err := strconv.Atoi(page)
+	if err != nil {
+		h.logger.Error("Invalid page id", zap.String("song_name", name), zap.Error(err))
+		return errs.ErrBadRequest
+	}
+
+	if err := validateID(pageID); err != nil {
+		h.logger.Error("Validation failed", zap.Error(err))
+		return errs.ErrBadRequest
+	}
+
+	content, err := h.usecase.GetSongText(name, pageID)
+	if err != nil {
+		h.logger.Error("Failed get song", zap.String("song_name", name), zap.Error(err))
+		if errors.Is(err, errs.ErrBadRequest) {
+			return errs.ErrBadRequest
+		}
+		return errs.ErrInternal
+	}
+
+	c := entity.Content{}
+	if content == c {
+		h.logger.Error("Song not found", zap.String("song_name", name), zap.Error(err))
+		return errs.ErrNotFound
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(Wrap(content))
+	h.logger.Info("Song find successfully", zap.String("song_name", name))
 	return nil
 }
 
@@ -80,31 +164,25 @@ func (h *Handler) GetSong(w http.ResponseWriter, r *http.Request) *errs.AppError
 //	@Tags		Songs
 //	@Accept		json
 //	@Produce	json
-//	@Param		id	path		int			true	"song id"
-//	@Success	200	{object}	Response	"Success"
-//	@Failure	400	{object}	Response	"Bad Request"
-//	@Failure	401	{object}	Response	"Unauthorized"
-//	@Failure	404	{object}	Response	"Not Found"
-//	@Failure	500	{object}	Response	"Internal Server Error"
-//	@Router		/songs/{id} [delete]
+//	@Param		name	path		string		true	"song name"
+//	@Success	200		{object}	Response	"Success"
+//	@Failure	400		{object}	Response	"Bad Request"
+//	@Failure	401		{object}	Response	"Unauthorized"
+//	@Failure	404		{object}	Response	"Not Found"
+//	@Failure	500		{object}	Response	"Internal Server Error"
+//	@Router		/songs/{name} [delete]
 func (h *Handler) DeleteSong(w http.ResponseWriter, r *http.Request) *errs.AppError {
 	params := httprouter.ParamsFromContext(r.Context())
-	id := params.ByName("id")
+	name := params.ByName("name")
 
-	songID, err := strconv.Atoi(id)
-	if err != nil {
-		h.logger.Error("Invalid song ID", zap.String("id", id), zap.Error(err))
+	if err := validateStr(name); err != nil {
+		h.logger.Error("Validation failed", zap.Error(err))
 		return errs.ErrBadRequest
 	}
 
-	if err := validateSongID(songID); err != nil {
-		h.logger.Error("Song_id validation failed", zap.Error(err))
-		return errs.ErrBadRequest
-	}
-
-	isDeleted, err := h.usecase.DeleteSong(songID)
+	isDeleted, err := h.usecase.DeleteSong(name)
 	if err != nil {
-		h.logger.Error("Failed delete song", zap.Int("song_id", songID), zap.Error(err))
+		h.logger.Error("Failed delete song", zap.String("song_name", name), zap.Error(err))
 		if errors.Is(err, errs.ErrBadRequest) {
 			return errs.ErrBadRequest
 		}
@@ -112,14 +190,14 @@ func (h *Handler) DeleteSong(w http.ResponseWriter, r *http.Request) *errs.AppEr
 	}
 
 	if !isDeleted {
-		h.logger.Error("Song not found", zap.Int("song_id", songID), zap.Error(err))
+		h.logger.Error("Song not found", zap.String("song_name", name), zap.Error(err))
 		return errs.ErrNotFound
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Wrap(nil))
-	h.logger.Info("Song deleted successfully", zap.Int("song_id", songID))
+	h.logger.Info("Song deleted successfully", zap.String("song_name", name))
 	return nil
 }
 
@@ -129,26 +207,20 @@ func (h *Handler) DeleteSong(w http.ResponseWriter, r *http.Request) *errs.AppEr
 //	@Tags		Songs
 //	@Accept		json
 //	@Produce	json
-//	@Param		id		path		int			true	"song id"
+//	@Param		name	path		string		true	"song name"
 //	@Param		request	body		entity.Song	true	"song text in json"
 //	@Success	200		{object}	Response	"Success"
 //	@Failure	400		{object}	Response	"Bad Request"
 //	@Failure	401		{object}	Response	"Unauthorized"
 //	@Failure	404		{object}	Response	"Not Found"
 //	@Failure	500		{object}	Response	"Internal Server Error"
-//	@Router		/songs/{id} [put]
+//	@Router		/songs/{name} [put]
 func (h *Handler) UpdateSong(w http.ResponseWriter, r *http.Request) *errs.AppError {
 	params := httprouter.ParamsFromContext(r.Context())
-	id := params.ByName("id")
+	name := params.ByName("name")
 
-	songID, err := strconv.Atoi(id)
-	if err != nil {
-		h.logger.Error("Invalid song_id", zap.String("id", id), zap.Error(err))
-		return errs.ErrBadRequest
-	}
-
-	if err := validateSongID(songID); err != nil {
-		h.logger.Error("Song_id validation failed", zap.Error(err))
+	if err := validateStr(name); err != nil {
+		h.logger.Error("Validation failed", zap.Error(err))
 		return errs.ErrBadRequest
 	}
 
@@ -160,13 +232,13 @@ func (h *Handler) UpdateSong(w http.ResponseWriter, r *http.Request) *errs.AppEr
 	defer r.Body.Close()
 
 	if err := validateUpdateSong(updatedSong); err != nil {
-		h.logger.Error("Song validation failed", zap.Error(err))
+		h.logger.Error("Validation failed", zap.Error(err))
 		return errs.ErrBadRequest
 	}
 
-	isUpdated, err := h.usecase.UpdateSong(songID, updatedSong)
+	isUpdated, err := h.usecase.UpdateSong(name, updatedSong)
 	if err != nil {
-		h.logger.Error("Failed update song", zap.Int("song_id", songID), zap.Error(err))
+		h.logger.Error("Failed update song", zap.String("song_name", name), zap.Error(err))
 		if errors.Is(err, errs.ErrBadRequest) {
 			return errs.ErrBadRequest
 		}
@@ -174,14 +246,14 @@ func (h *Handler) UpdateSong(w http.ResponseWriter, r *http.Request) *errs.AppEr
 	}
 
 	if !isUpdated {
-		h.logger.Error("Song not found", zap.Int("song_id", songID), zap.Error(err))
+		h.logger.Error("Song not found", zap.String("song_name", name), zap.Error(err))
 		return errs.ErrNotFound
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Wrap(nil))
-	h.logger.Info("Song updated successfully", zap.Int("song_id", songID))
+	h.logger.Info("Song updated successfully", zap.String("song_name", name))
 	return nil
 }
 
@@ -206,7 +278,7 @@ func (h *Handler) AddSong(w http.ResponseWriter, r *http.Request) *errs.AppError
 	defer r.Body.Close()
 
 	if err := validateNewSong(newSong); err != nil {
-		h.logger.Error("Song validation failed", zap.Error(err))
+		h.logger.Error("Validation failed", zap.Error(err))
 		return errs.ErrBadRequest
 	}
 
@@ -225,7 +297,19 @@ func (h *Handler) AddSong(w http.ResponseWriter, r *http.Request) *errs.AppError
 	return nil
 }
 
-// TODO: функции ниже вероятно возможно объединить в дженерик?
+func validateID(id int) error {
+	if id == 0 {
+		return fmt.Errorf("missing or invalid id")
+	}
+	return nil
+}
+
+func validateStr(s string) error {
+	if s == "" {
+		return fmt.Errorf("missing or invalid query arg")
+	}
+	return nil
+}
 
 func validateNewSong(song entity.NewSong) error {
 	if song.Group == "" {
@@ -233,13 +317,6 @@ func validateNewSong(song entity.NewSong) error {
 	}
 	if song.Name == "" {
 		return fmt.Errorf("missing or invalid song name")
-	}
-	return nil
-}
-
-func validateSongID(id int) error {
-	if id == 0 {
-		return fmt.Errorf("missing or invalid song id")
 	}
 	return nil
 }
@@ -254,11 +331,18 @@ func validateUpdateSong(song entity.Song) error {
 	if song.ReleaseDate == "" {
 		return fmt.Errorf("missing or invalid song release date")
 	}
-	if song.Text == "" {
+	if song.Text == nil {
 		return fmt.Errorf("missing or invalid song text")
 	}
 	if song.Link == "" {
 		return fmt.Errorf("missing or invalid song link")
 	}
 	return nil
+}
+
+func trasnformStr(s string) interface{} {
+	if s == "" {
+		return nil
+	}
+	return s
 }

@@ -26,12 +26,63 @@ const docTemplate = `{
                 "tags": [
                     "Songs"
                 ],
-                "summary": "WIP..",
+                "summary": "Get filtered songs.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "song name",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "song group",
+                        "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "song release date",
+                        "name": "release_date",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "page",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Success",
                         "schema": {
-                            "$ref": "#/definitions/http_v1_handler.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http_v1_handler.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "content": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/entity.Content"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "items": {
+                                                            "$ref": "#/definitions/entity.Song"
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -110,7 +161,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/songs/{id}": {
+        "/songs/{name}": {
             "get": {
                 "consumes": [
                     "application/json"
@@ -121,13 +172,21 @@ const docTemplate = `{
                 "tags": [
                     "Songs"
                 ],
-                "summary": "WIP..",
+                "summary": "Get song text with couplet pagination.",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "song id",
-                        "name": "id",
+                        "type": "string",
+                        "description": "song name",
+                        "name": "name",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "page",
+                        "name": "page",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -135,7 +194,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Success",
                         "schema": {
-                            "$ref": "#/definitions/http_v1_handler.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http_v1_handler.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "content": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/entity.Content"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "items": {
+                                                            "$ref": "#/definitions/entity.Couplet"
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -177,9 +260,9 @@ const docTemplate = `{
                 "summary": "Update song.",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "song id",
-                        "name": "id",
+                        "type": "string",
+                        "description": "song name",
+                        "name": "name",
                         "in": "path",
                         "required": true
                     },
@@ -239,9 +322,9 @@ const docTemplate = `{
                 "summary": "Delete song.",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "song id",
-                        "name": "id",
+                        "type": "string",
+                        "description": "song name",
+                        "name": "name",
                         "in": "path",
                         "required": true
                     }
@@ -282,6 +365,29 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "entity.Content": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "items": {},
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_page": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entity.Couplet": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
         "entity.NewSong": {
             "type": "object",
             "properties": {
@@ -309,7 +415,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "text": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

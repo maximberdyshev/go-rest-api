@@ -63,11 +63,11 @@ func (uc *Usecase) AddSong(newSong entity.NewSong) error {
 	}
 
 	songDTO := entity.SongDTO{
-		Name:        newSong.Name,
-		GroupID:     groupID,
-		ReleaseDate: songDetail.ReleaseDate,
-		Text:        songDetail.Text,
-		Link:        songDetail.Link,
+		Name:        &newSong.Name,
+		GroupID:     &groupID,
+		ReleaseDate: &songDetail.ReleaseDate,
+		Text:        &songDetail.Text,
+		Link:        &songDetail.Link,
 	}
 
 	if err = uc.repo.CreateSong(songDTO); err != nil {
@@ -108,7 +108,7 @@ func (uc *Usecase) DeleteSong(name string) (bool, error) {
 1. Поиск существующей песни происходит на стороне хранилища.
 */
 func (uc *Usecase) UpdateSong(name string, updateSong entity.Song) (bool, error) {
-	groupID, err := uc.createGroup(updateSong.Group)
+	groupID, err := uc.createGroup(*updateSong.Group)
 	if err != nil {
 		uc.logger.Debug("Can't create group", zap.Error(err))
 		return false, err
@@ -116,7 +116,7 @@ func (uc *Usecase) UpdateSong(name string, updateSong entity.Song) (bool, error)
 
 	song := entity.SongDTO{
 		Name:        updateSong.Name,
-		GroupID:     groupID,
+		GroupID:     &groupID,
 		ReleaseDate: updateSong.ReleaseDate,
 		Text:        updateSong.Text,
 		Link:        updateSong.Link,
@@ -217,7 +217,7 @@ func (uc *Usecase) GetFilteredSongs(song entity.FilterSong, page int) (entity.Co
 	}
 
 	totalPage := len(songs) / 10
-	if totalPage < 0 {
+	if totalPage <= 0 {
 		totalPage = 1
 	}
 

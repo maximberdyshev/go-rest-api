@@ -81,7 +81,7 @@ func Wrap(ctx context.Context, h appHandler) http.HandlerFunc {
 			default:
 				logger.Error("Unexpected error", zap.Error(err))
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(rw.Wrap(err))
+				json.NewEncoder(w).Encode(rw.Wrap(errs.ErrInternal))
 			}
 		}
 	}

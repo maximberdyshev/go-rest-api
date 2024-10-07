@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.songs (
     name VARCHAR(255) NOT NULL,
     group_id INT REFERENCES public.music_groups(id) NOT NULL,
     release_date VARCHAR(10) NOT NULL,
-    text JSON NOT NULL,
+    text TEXT[] NOT NULL,
     link VARCHAR(255) NOT NULL,
     deleted TIMESTAMP
 );

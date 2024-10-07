@@ -3,8 +3,9 @@ package repo
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"go-rest-api/internal/entity"
@@ -47,23 +48,21 @@ func (r *Repo) FindGroupID(group string) (id int, err error) {
 }
 
 // CreateGroup создаёт новую запись о группе в БД и возвращает id; или возвращает ощибку.
-func (r *Repo) CreateGroup(group string) (int, error) {
+func (r *Repo) CreateGroup(group string) (id int, err error) {
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	res, err := r.db.ExecContext(ctx, queryCreateGroup, group)
+	err = r.db.QueryRowContext(ctx, queryCreateGroup, group).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		r.logger.Debug("Request did not return value")
+		return 0, nil
+	}
 	if err != nil {
-		r.logger.Debug("Can't insert into DB", zap.Error(err))
+		r.logger.Debug("Execute sql request error", zap.Error(err))
 		return 0, err
 	}
 
-	id, err := res.LastInsertId()
-	if err != nil {
-		r.logger.Debug("Failed to get last insert id", zap.Error(err))
-		return 0, err
-	}
-
-	return int(id), nil
+	return id, nil
 }
 
 // CreateSong сохраняет песню и возвращает nil; или возвращает ошибку.
@@ -71,16 +70,12 @@ func (r *Repo) CreateSong(song entity.SongDTO) error {
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	textJSON, err := json.Marshal(song.Text)
-	if err != nil {
-		r.logger.Debug("Can't serialize song text to JSON", zap.Error(err))
-		return err
-	}
-
-	if err = isDate(song.ReleaseDate); err != nil {
+	if err := isDate(*song.ReleaseDate); err != nil {
 		r.logger.Debug("Wrong date format", zap.Error(err))
 		return errs.ErrBadRequest
 	}
+
+	text := "{" + strings.Join(*song.Text, ",") + "}"
 
 	if _, err := r.db.ExecContext(
 		ctx,
@@ -88,7 +83,7 @@ func (r *Repo) CreateSong(song entity.SongDTO) error {
 		song.Name,
 		song.GroupID,
 		song.ReleaseDate,
-		textJSON,
+		text,
 		song.Link,
 	); err != nil {
 		r.logger.Debug("Can't insert into DB", zap.Error(err))
@@ -127,27 +122,21 @@ func (r *Repo) UpdateSong(name string, song entity.SongDTO) (bool, error) {
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	textJSON, err := json.Marshal(song.Text)
-	if err != nil {
-		r.logger.Debug("Can't serialize song text to JSON", zap.Error(err))
-		return false, err
+	if song.ReleaseDate != nil {
+		if err := isDate(*song.ReleaseDate); err != nil {
+			r.logger.Debug("Wrong date format", zap.Error(err))
+			return false, errs.ErrBadRequest
+		}
 	}
 
-	if err = isDate(song.ReleaseDate); err != nil {
-		r.logger.Debug("Wrong date format", zap.Error(err))
-		return false, errs.ErrBadRequest
+	query, args := r.queryUpdateSong(song, name)
+	if query == "" {
+		errMsg := "query is empty"
+		r.logger.Debug("Incorrect query", zap.Error(fmt.Errorf("%v", errMsg)))
+		return false, fmt.Errorf("%v", errMsg)
 	}
 
-	res, err := r.db.ExecContext(
-		ctx,
-		queryUpdateSong,
-		song.Name,
-		song.GroupID,
-		song.ReleaseDate,
-		textJSON,
-		song.Link,
-		name,
-	)
+	res, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		r.logger.Debug("Can't update field in table", zap.Error(err))
 		return false, err
@@ -167,12 +156,12 @@ func (r *Repo) UpdateSong(name string, song entity.SongDTO) (bool, error) {
 }
 
 // GetSongText по song name находит песню и возвращает текст; или возвращает ошибку.
-func (r *Repo) GetSongText(name string) (text []string, err error) {
+func (r *Repo) GetSongText(name string) (t []string, err error) {
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	var textJSON []byte
-	err = r.db.QueryRowContext(ctx, queryGetSongText, name).Scan(&textJSON)
+	var text []byte
+	err = r.db.QueryRowContext(ctx, queryGetSongText, name).Scan(&text)
 	if errors.Is(err, sql.ErrNoRows) {
 		r.logger.Debug("Request did not return value")
 		return nil, nil
@@ -182,12 +171,10 @@ func (r *Repo) GetSongText(name string) (text []string, err error) {
 		return nil, err
 	}
 
-	err = json.Unmarshal(textJSON, &text)
-	if err != nil {
-		r.logger.Debug("Can't deserialize JSON to song text", zap.Error(err))
-		return nil, err
-	}
-	return text, nil
+	str := strings.Trim(string(text), "{}")
+	t = strings.Split(str, ",")
+
+	return t, nil
 }
 
 // GetFilteredSongs возвращает отфильтрованный список песен или ошибку.
@@ -204,7 +191,12 @@ func (r *Repo) GetFilteredSongs(song entity.FilterSongDTO) (songs []entity.Song,
 
 	query, args := r.queryGetFilteredSongs(song)
 
-	rows, err := r.db.QueryContext(ctx, query, args)
+	var rows *sql.Rows
+	if args == nil {
+		rows, err = r.db.QueryContext(ctx, query)
+	} else {
+		rows, err = r.db.QueryContext(ctx, query, args...)
+	}
 	if err != nil {
 		r.logger.Debug("Execute sql request error", zap.Error(err))
 		return nil, err
@@ -213,28 +205,33 @@ func (r *Repo) GetFilteredSongs(song entity.FilterSongDTO) (songs []entity.Song,
 
 	for rows.Next() {
 		var song entity.SongDTO
+		var text []byte
 
 		if err := rows.Scan(
 			&song.Name,
 			&song.GroupID,
 			&song.ReleaseDate,
-			&song.Text,
+			&text,
 			&song.Link,
 		); err != nil {
+			r.logger.Debug("Rows scan error", zap.Error(err))
 			return nil, err
 		}
 
-		group, err := r.findGroupName(song.GroupID)
+		group, err := r.findGroupName(*song.GroupID)
 		if err != nil {
 			r.logger.Debug("Can't find group name", zap.Error(err))
 			return nil, err
 		}
 
+		str := strings.Trim(string(text), "{}")
+		t := strings.Split(str, ",")
+
 		s := entity.Song{
 			Name:        song.Name,
-			Group:       group,
+			Group:       &group,
 			ReleaseDate: song.ReleaseDate,
-			Text:        song.Text,
+			Text:        &t,
 			Link:        song.Link,
 		}
 
@@ -254,7 +251,7 @@ func (r *Repo) findGroupName(id int) (name string, err error) {
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	err = r.db.QueryRowContext(ctx, queryFindGroupName, id).Scan(&id)
+	err = r.db.QueryRowContext(ctx, queryFindGroupName, id).Scan(&name)
 	if errors.Is(err, sql.ErrNoRows) {
 		r.logger.Debug("Request did not return value")
 		return "", nil

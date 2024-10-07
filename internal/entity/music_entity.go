@@ -17,11 +17,11 @@ type (
 
 	// update, filtered song
 	Song struct {
-		Name        string   `json:"name"  validate:"string"`
-		Group       string   `json:"group" validate:"string"`
-		ReleaseDate string   `json:"release_date" validate:"string"`
-		Text        []string `json:"text" validate:"array"`
-		Link        string   `json:"link" validate:"string"`
+		Name        *string   `json:"name"  validate:"string"`
+		Group       *string   `json:"group" validate:"string"`
+		ReleaseDate *string   `json:"release_date" validate:"string"`
+		Text        *[]string `json:"text" validate:"array"`
+		Link        *string   `json:"link" validate:"string"`
 	}
 
 	// filtered songs
@@ -49,11 +49,11 @@ type (
 // DTO -- repo (postgres)
 type (
 	SongDTO struct {
-		Name        string
-		GroupID     int
-		ReleaseDate string
-		Text        []string
-		Link        string
+		Name        *string
+		GroupID     *int
+		ReleaseDate *string
+		Text        *[]string
+		Link        *string
 	}
 
 	FilterSongDTO struct {

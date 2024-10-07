@@ -62,10 +62,29 @@ func (wa *Webapi) GetSongDetail(newSong entity.NewSong) (songDetail entity.SongD
 			wa.logger.Debug("Can't decode request body", zap.Error(err))
 			return entity.SongDetail{}, err
 		}
+
+		if err = validate(songDetail); err != nil {
+			wa.logger.Debug("External API return incorrect song detail")
+			return entity.SongDetail{}, err
+		}
+
 		return songDetail, nil
 	} else {
 		wa.logger.Debug("Request to external service return status code", zap.Int("status_code", res.StatusCode))
 		errMsg := fmt.Sprintf("Received non-200 response status code: %s", res.Status)
 		return entity.SongDetail{}, errs.NewAppError(nil, errMsg)
 	}
+}
+
+func validate(song entity.SongDetail) error {
+	if song.Text == nil {
+		return fmt.Errorf("missing song text")
+	}
+	if song.ReleaseDate == "" {
+		return fmt.Errorf("missing release date")
+	}
+	if song.Link == "" {
+		return fmt.Errorf("missing link")
+	}
+	return nil
 }

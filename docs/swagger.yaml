@@ -187,7 +187,6 @@ paths:
         in: query
         minimum: 1
         name: page
-        required: true
         type: integer
       produces:
       - application/json

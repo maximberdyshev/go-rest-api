@@ -19,8 +19,7 @@ import (
 //	@host		localhost:5000
 //	@BasePath	/api/v1
 
-//	@Security	ApiKeyAuth
-
+// @Security					ApiKeyAuth
 // @securityDefinitions.apikey	ApiKeyAuth
 // @in							header
 // @name						Authorization
@@ -29,14 +28,14 @@ func main() {
 
 	cfg, err := config.New()
 	if err != nil {
-		fmt.Printf("%s\tERROR\t%s:19\t%v\n", curTime(), srcFile, err)
+		fmt.Printf("%s\tERROR\t%s:31\t%v\n", curTime(), srcFile, err)
 		os.Exit(1)
 	}
-	fmt.Printf("%s\tINFO\t%s:22\tConfig loaded\n", curTime(), srcFile)
+	fmt.Printf("%s\tINFO\t%s:34\tConfig loaded\n", curTime(), srcFile)
 
 	zapLogger, err := logger.New((*logger.Config)(&cfg.Logger))
 	if err != nil {
-		fmt.Printf("%s\tERROR\t%s:26\t%v\n", curTime(), srcFile, err)
+		fmt.Printf("%s\tERROR\t%s:38\t%v\n", curTime(), srcFile, err)
 		os.Exit(1)
 	}
 	defer zapLogger.Sync()

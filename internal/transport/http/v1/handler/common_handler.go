@@ -5,20 +5,19 @@ import (
 	"go-rest-api/internal/errs"
 )
 
-type Response struct {
-	Description string `json:"description"`
-}
+type (
+	Response struct {
+		Description string `json:"description"`
+	}
 
-type ResponseContent struct {
-	Description string         `json:"description"`
-	Content     entity.Content `json:"content"`
-}
+	ResponseContent struct {
+		Description string         `json:"description"`
+		Content     entity.Content `json:"content"`
+	}
+)
 
 func Wrap(i interface{}) interface{} {
 	switch v := i.(type) {
-	case errs.AppError:
-		return Response{Description: v.Msg}
-
 	case nil:
 		return Response{Description: "ok"}
 
@@ -29,6 +28,6 @@ func Wrap(i interface{}) interface{} {
 		}
 
 	default:
-		return nil
+		return Response{Description: v.(*errs.AppError).Msg}
 	}
 }

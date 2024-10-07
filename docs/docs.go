@@ -186,8 +186,7 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "page",
                         "name": "page",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
